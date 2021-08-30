@@ -61,11 +61,11 @@ def integrand(argc, argv):
 
 
 if __name__ == '__main__':
-  WIDTH = 1024
-  HEIGHT = 1024
+  WIDTH = 32
+  HEIGHT = 32
 
-  roughness_eps = 0.035
   cos_theta_eps = 0.02
+  roughness_eps = 0.035
 
   xrange = np.linspace(0, 1, WIDTH)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
@@ -96,11 +96,7 @@ if __name__ == '__main__':
 
   plt.show()
 
-  print(f'===== Directional albedo lookup table ({WIDTH}x{HEIGHT}) =====')
-  print(',\n'.join(', '.join(str(img[i, j]) + 'f' for j in range(WIDTH)) for i in range(HEIGHT)))
-  print('===================================================')
   print('Mean absolute error:', np.mean(errors))
   print('Maximum absolute error:', np.max(errors))
   
   np.savetxt('conductors.csv', img, fmt='%a', delimiter=',')
-
