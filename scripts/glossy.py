@@ -112,7 +112,7 @@ if __name__ == '__main__':
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
-  ior_eps = 1e-4
+  # ior_eps = 1e-4
 
   xrange = np.linspace(0, 1, WIDTH)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
@@ -122,11 +122,11 @@ if __name__ == '__main__':
   yrange = np.square(yrange)
 
   zrange = np.linspace(0, 1, DEPTH)
-  zrange = np.where(zrange < ior_eps, ior_eps, zrange)
+  # zrange = np.where(zrange < ior_eps, ior_eps, zrange)
   zrange = reflectivity_to_eta(zrange)
 
   integrand = LowLevelCallable(integrand.ctypes)
-  
+
   def integrate(args):
     return dblquad(integrand, 0, 2 * np.pi, lambda x: 0, lambda x: 1, args=args)
 
