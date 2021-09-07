@@ -84,10 +84,10 @@ if __name__ == '__main__':
 
   albedo, errors = zip(*results)
 
-  img = np.asarray(albedo, dtype=np.float32).reshape(HEIGHT, WIDTH)
+  table = np.asarray(albedo, dtype=np.float32).reshape(HEIGHT, WIDTH)
 
   plt.figure()
-  plt.imshow(img, extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+  plt.imshow(table, extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
   plt.colorbar()
 
   plt.title('Directional Albedo')
@@ -98,5 +98,5 @@ if __name__ == '__main__':
 
   print('Mean absolute error:', np.mean(errors))
   print('Maximum absolute error:', np.max(errors))
-  
-  np.savetxt('conductors.csv', img, fmt='%a', delimiter=',')
+
+  np.savetxt('conductors.csv', table, fmt='%a', delimiter=',')

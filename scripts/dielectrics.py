@@ -5,12 +5,12 @@ from itertools import product
 from multiprocessing import cpu_count, Pool
 from numba import carray, cfunc, jit, types
 from scipy import LowLevelCallable
-from scipy.integrate import dblquad, nquad
+from scipy.integrate import nquad
 from tqdm import tqdm
 
 
 def reflectivity_to_eta(reflectivity):
-  reflectivity = np.clip(reflectivity, 0, 0.98)
+  reflectivity = np.clip(reflectivity, 0, 0.99)
   return (1 + np.sqrt(reflectivity)) / (1 - np.sqrt(reflectivity))
 
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
-  ior_eps = 0.02
+  ior_eps = 1e-4
 
   xrange = np.linspace(0, 1, WIDTH)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
@@ -114,13 +114,17 @@ if __name__ == '__main__':
   integrand = LowLevelCallable(integrand.ctypes)
 
   # Entering medium
+  print('Entering medium, reflection...')
+
   def integrate(args):
     return nquad(integrand, ((0, 1), (0, 2 * np.pi)), args=args, opts={'limit': 200})
 
   with Pool(cpu_count()) as pool:
     results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
 
-  albedo_r, errors_r = zip(*results)
+  enter_albedo_r, enter_errors_r = zip(*results)
+
+  print('Entering medium, transmission...')
 
   def integrate(args):
     return nquad(integrand, ((-1, 0), (0, 2 * np.pi)), args=args, opts={'limit': 200})
@@ -128,41 +132,22 @@ if __name__ == '__main__':
   with Pool(cpu_count()) as pool:
     results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
 
-  albedo_t, errors_t = zip(*results)
-
-  img_r = np.asarray(albedo_r, dtype=np.float32).reshape(DEPTH, HEIGHT, WIDTH)
-  img_t = np.asarray(albedo_t, dtype=np.float32).reshape(DEPTH, HEIGHT, WIDTH)
-  img = img_r + img_t
-
-  for im, title in zip([img_r, img_t, img], [' (Reflection)', ' (Transmission)', '']):
-    plt.figure()
-    plt.suptitle('Directional Albedo' + title)
-
-    for i in range(16):
-      plt.subplot(4, 4, i + 1)
-      plt.imshow(im[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
-      plt.colorbar()
-
-      plt.title(f'Reflectivity = {i / 15:.2f}')
-      plt.xlabel('cos(theta)')
-      plt.ylabel('roughness')
-
-    plt.show()
-
-  np.savetxt('dielectrics_entering_r.csv', img_r.reshape(-1, WIDTH), fmt='%a', delimiter=',')
-  np.savetxt('dielectrics_entering_t.csv', img_t.reshape(-1, WIDTH), fmt='%a', delimiter=',')
-  np.savetxt('dielectrics_entering.csv', img.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  enter_albedo_t, enter_errors_t = zip(*results)
 
   # Leaving medium
   zrange = 1 / zrange
 
+  print('Leaving medium, reflection...')
+
   def integrate(args):
     return nquad(integrand, ((0, 1), (0, 2 * np.pi)), args=args, opts={'limit': 200})
 
   with Pool(cpu_count()) as pool:
     results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
 
-  albedo_r, errors_r = zip(*results)
+  leave_albedo_r, leave_errors_r = zip(*results)
+
+  print('Leaving medium, transmission...')
 
   def integrate(args):
     return nquad(integrand, ((-1, 0), (0, 2 * np.pi)), args=args, opts={'limit': 200})
@@ -170,19 +155,28 @@ if __name__ == '__main__':
   with Pool(cpu_count()) as pool:
     results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
 
-  albedo_t, errors_t = zip(*results)
+  leave_albedo_t, leave_errors_t = zip(*results)
 
-  img_r = np.asarray(albedo_r).reshape(DEPTH, HEIGHT, WIDTH)
-  img_t = np.asarray(albedo_t).reshape(DEPTH, HEIGHT, WIDTH)
-  img = img_r + img_t
+  # Show and save results
+  enter_table_r = np.asarray(enter_albedo_r, dtype=np.float32).reshape(DEPTH, HEIGHT, WIDTH)
+  enter_table_t = np.asarray(enter_albedo_t, dtype=np.float32).reshape(DEPTH, HEIGHT, WIDTH)
+  enter_table = enter_table_r + enter_table_t
 
-  for im, title in zip([img_r, img_t, img], [' (Reflection)', ' (Transmission)', '']):
+  leave_table_r = np.asarray(leave_albedo_r).reshape(DEPTH, HEIGHT, WIDTH)
+  leave_table_t = np.asarray(leave_albedo_t).reshape(DEPTH, HEIGHT, WIDTH)
+  leave_table = leave_table_r + leave_table_t
+
+  tables = [enter_table_r, enter_table_t, enter_table, leave_table_r, leave_table_t, leave_table]
+  titles = ['Entering Medium, Reflection', 'Entering Medium, Transmission', 'Entering Medium',
+            'Leaving Medium, Reflection', 'Leaving Medium, Transmission', 'Leaving Medium']
+
+  for table, title in zip(tables, titles):
     plt.figure()
-    plt.suptitle('Directional Albedo' + title)
+    plt.suptitle(f'Directional Albedo ({title})')
 
     for i in range(16):
       plt.subplot(4, 4, i + 1)
-      plt.imshow(im[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+      plt.imshow(table[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
       plt.colorbar()
 
       plt.title(f'Reflectivity = {i / 15:.2f}')
@@ -191,6 +185,18 @@ if __name__ == '__main__':
 
     plt.show()
 
-  np.savetxt('dielectrics_leaving_r.csv', img_r.reshape(-1, WIDTH), fmt='%a', delimiter=',')
-  np.savetxt('dielectrics_leaving_t.csv', img_t.reshape(-1, WIDTH), fmt='%a', delimiter=',')
-  np.savetxt('dielectrics_leaving.csv', img.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  errors = [enter_errors_r, enter_errors_t, leave_errors_r, leave_errors_t]
+  names = ['entering medium, reflection', 'entering medium, transmission',
+            'leaving medium, reflection', 'leaving medium, transmission']
+
+  for errors, name in zip(errors, names):
+    print(f'Mean absolute error ({name}):', np.mean(errors))
+    print(f'Maximum absolute error ({name}):', np.max(errors))
+
+  np.savetxt('dielectrics_entering_r.csv', enter_table_r.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_entering_t.csv', enter_table_t.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_entering.csv', enter_table.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+
+  np.savetxt('dielectrics_leaving_r.csv', leave_table_r.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_leaving_t.csv', leave_table_t.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_leaving.csv', leave_table.reshape(-1, WIDTH), fmt='%a', delimiter=',')

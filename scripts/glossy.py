@@ -135,14 +135,14 @@ if __name__ == '__main__':
 
   albedo, errors = zip(*results)
 
-  img = np.asarray(albedo, dtype=np.float32).reshape(DEPTH, HEIGHT, WIDTH)
+  table = np.asarray(albedo, dtype=np.float32).reshape(DEPTH, HEIGHT, WIDTH)
 
   plt.figure()
   plt.suptitle('Directional Albedo')
 
   for i in range(16):
     plt.subplot(4, 4, i + 1)
-    plt.imshow(img[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+    plt.imshow(table[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
     plt.colorbar()
 
     plt.title(f'Reflectivity = {i / 15:.2f}')
@@ -154,4 +154,4 @@ if __name__ == '__main__':
   print('Mean absolute error:', np.mean(errors))
   print('Maximum absolute error:', np.max(errors))
 
-  np.savetxt('glossy.csv', img.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('glossy.csv', table.reshape(-1, WIDTH), fmt='%a', delimiter=',')
