@@ -5,7 +5,7 @@ from itertools import product
 from multiprocessing import cpu_count, Pool
 from numba import carray, cfunc, jit, types
 from scipy import LowLevelCallable
-from scipy.integrate import dblquad
+from scipy.integrate import dblquad, nquad
 from tqdm import tqdm
 
 
@@ -91,9 +91,9 @@ def integrand(argc, argv):
 
 
 if __name__ == '__main__':
-  WIDTH = 16
-  HEIGHT = 16
-  DEPTH = 16
+  WIDTH = 32
+  HEIGHT = 32
+  DEPTH = 32
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
@@ -101,33 +101,29 @@ if __name__ == '__main__':
 
   xrange = np.linspace(0, 1, WIDTH)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
+  xrange = np.where(xrange > 1 - cos_theta_eps, 1 - cos_theta_eps, xrange)
 
   yrange = np.linspace(0, 1, HEIGHT)
   yrange = np.where(yrange < roughness_eps, roughness_eps, yrange)
   yrange = np.square(yrange)
 
-  zrange = np.linspace(0, 1, HEIGHT)
+  zrange = np.linspace(0, 1, DEPTH)
   zrange = np.where(zrange < ior_eps, ior_eps, zrange)
   zrange = reflectivity_to_eta(zrange)
 
   integrand = LowLevelCallable(integrand.ctypes)
-  
-  # Reflection
-  print('===== Reflection =====')
 
+  # Entering medium
   def integrate(args):
-    return dblquad(integrand, 0, 2 * np.pi, lambda x: 0, lambda x: 1, args=args)
+    return nquad(integrand, ((0, 1), (0, 2 * np.pi)), args=args, opts={'limit': 200})
 
   with Pool(cpu_count()) as pool:
     results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
 
   albedo_r, errors_r = zip(*results)
 
-  # Transmission
-  print('===== Transmission =====')
-
   def integrate(args):
-    return dblquad(integrand, 0, 2 * np.pi, lambda x: -1, lambda x: 0, args=args)
+    return nquad(integrand, ((-1, 0), (0, 2 * np.pi)), args=args, opts={'limit': 200})
 
   with Pool(cpu_count()) as pool:
     results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
@@ -142,7 +138,7 @@ if __name__ == '__main__':
     plt.figure()
     plt.suptitle('Directional Albedo' + title)
 
-    for i in range(DEPTH):
+    for i in range(16):
       plt.subplot(4, 4, i + 1)
       plt.imshow(im[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
       plt.colorbar()
@@ -153,6 +149,48 @@ if __name__ == '__main__':
 
     plt.show()
 
-  np.savetxt('dielectrics_reflection.csv', img_r.reshape(-1, WIDTH), fmt='%a', delimiter=',')
-  np.savetxt('dielectrics_transmission.csv', img_t.reshape(-1, WIDTH), fmt='%a', delimiter=',')
-  np.savetxt('dielectrics.csv', img.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_entering_r.csv', img_r.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_entering_t.csv', img_t.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_entering.csv', img.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+
+  # Leaving medium
+  zrange = 1 / zrange
+
+  def integrate(args):
+    return nquad(integrand, ((0, 1), (0, 2 * np.pi)), args=args, opts={'limit': 200})
+
+  with Pool(cpu_count()) as pool:
+    results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
+
+  albedo_r, errors_r = zip(*results)
+
+  def integrate(args):
+    return nquad(integrand, ((-1, 0), (0, 2 * np.pi)), args=args, opts={'limit': 200})
+
+  with Pool(cpu_count()) as pool:
+    results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
+
+  albedo_t, errors_t = zip(*results)
+
+  img_r = np.asarray(albedo_r).reshape(DEPTH, HEIGHT, WIDTH)
+  img_t = np.asarray(albedo_t).reshape(DEPTH, HEIGHT, WIDTH)
+  img = img_r + img_t
+
+  for im, title in zip([img_r, img_t, img], [' (Reflection)', ' (Transmission)', '']):
+    plt.figure()
+    plt.suptitle('Directional Albedo' + title)
+
+    for i in range(16):
+      plt.subplot(4, 4, i + 1)
+      plt.imshow(im[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+      plt.colorbar()
+
+      plt.title(f'Reflectivity = {i / 15:.2f}')
+      plt.xlabel('cos(theta)')
+      plt.ylabel('roughness')
+
+    plt.show()
+
+  np.savetxt('dielectrics_leaving_r.csv', img_r.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_leaving_t.csv', img_t.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt('dielectrics_leaving.csv', img.reshape(-1, WIDTH), fmt='%a', delimiter=',')
