@@ -101,6 +101,7 @@ if __name__ == '__main__':
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
+  ior_eps = 1.02
 
   xrange = np.linspace(0, 1, args.size)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
@@ -112,6 +113,7 @@ if __name__ == '__main__':
 
   zrange = np.linspace(0, 1, args.size)
   zrange = reflectivity_to_eta(zrange)
+  zrange = np.where(zrange < ior_eps, ior_eps, zrange)
 
   integrand = LowLevelCallable(integrand.ctypes)
 
@@ -164,8 +166,8 @@ if __name__ == '__main__':
   enter_table_t = np.asarray(enter_albedo_t, dtype=np.float32).reshape(args.size, args.size, args.size)
   enter_table = enter_table_r + enter_table_t
 
-  leave_table_r = np.asarray(leave_albedo_r).reshape(args.size, args.size, args.size)
-  leave_table_t = np.asarray(leave_albedo_t).reshape(args.size, args.size, args.size)
+  leave_table_r = np.asarray(leave_albedo_r, dtype=np.float32).reshape(args.size, args.size, args.size)
+  leave_table_t = np.asarray(leave_albedo_t, dtype=np.float32).reshape(args.size, args.size, args.size)
   leave_table = leave_table_r + leave_table_t
 
   tables = [enter_table_r, enter_table_t, enter_table, leave_table_r, leave_table_t, leave_table]
