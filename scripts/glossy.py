@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from argparse import ArgumentParser
 from itertools import product
 from multiprocessing import cpu_count, Pool
 from numba import carray, cfunc, jit, types
@@ -9,11 +10,11 @@ from scipy.integrate import dblquad
 from tqdm import tqdm
 
 
-E_lut = np.genfromtxt('resources/conductors.csv', delimiter=',', dtype=np.float32)
+specular_albedo = np.genfromtxt('resources/conductors.csv', delimiter=',', dtype=np.float32)
 
 
 def reflectivity_to_eta(reflectivity):
-  reflectivity = np.minimum(reflectivity, 0.99)
+  reflectivity = np.clip(reflectivity, 0, 0.99)
   return (1 + np.sqrt(reflectivity)) / (1 - np.sqrt(reflectivity))
 
 
@@ -58,20 +59,20 @@ def microfacet_shadowing(roughness, halfway, outgoing, incoming):
 
 @jit(nopython=True)
 def microfacet_compensation(roughness, mu_out):
-  lenx, leny = E_lut.shape
+  leny, lenx = specular_albedo.shape
 
   s = np.sqrt(roughness) * (leny - 1)
-  t = mu_out * (leny - 1)
+  t = mu_out * (lenx - 1)
 
   i, j = int(s), int(t)
-  ii = min(i + 1, lenx - 1)
-  jj = min(j + 1, leny - 1)
+  ii = min(i + 1, leny - 1)
+  jj = min(j + 1, lenx - 1)
   u, v = s - i, t - j
 
-  E = E_lut[i, j] * (1 - u) * (1 - v) + \
-      E_lut[i, jj] * (1 - u) * v + \
-      E_lut[ii, j] * u * (1 - v) + \
-      E_lut[ii, jj] * u * v
+  E = specular_albedo[i, j] * (1 - u) * (1 - v) + \
+      specular_albedo[i, jj] * (1 - u) * v + \
+      specular_albedo[ii, j] * u * (1 - v) + \
+      specular_albedo[ii, jj] * u * v
 
   return 1 / E
 
@@ -106,21 +107,23 @@ def integrand(argc, argv):
 
 
 if __name__ == '__main__':
-  WIDTH = 16
-  HEIGHT = 16
-  DEPTH = 16
+  parser = ArgumentParser()
+  parser.add_argument('--size', help='Look-up table size', type=int, default=16)
+  parser.add_argument('--output', help='Output filename', default='glossy.csv')
+
+  args = parser.parse_args()
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
 
-  xrange = np.linspace(0, 1, WIDTH)
+  xrange = np.linspace(0, 1, args.size)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
 
-  yrange = np.linspace(0, 1, HEIGHT)
+  yrange = np.linspace(0, 1, args.size)
   yrange = np.where(yrange < roughness_eps, roughness_eps, yrange)
   yrange = np.square(yrange)
 
-  zrange = np.linspace(0, 1, DEPTH)
+  zrange = np.linspace(0, 1, args.size)
   zrange = reflectivity_to_eta(zrange)
 
   integrand = LowLevelCallable(integrand.ctypes)
@@ -129,18 +132,18 @@ if __name__ == '__main__':
     return dblquad(integrand, 0, 2 * np.pi, lambda x: 0, lambda x: 1, args=args)
 
   with Pool(cpu_count()) as pool:
-    results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=WIDTH * HEIGHT * DEPTH))
+    results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=args.size * args.size * args.size))
 
   albedo, errors = zip(*results)
 
-  table = np.asarray(albedo, dtype=np.float32).reshape(DEPTH, HEIGHT, WIDTH)
+  table = np.asarray(albedo, dtype=np.float32).reshape(args.size, args.size, args.size)
 
   plt.figure()
   plt.suptitle('Directional Albedo')
 
   for i in range(16):
     plt.subplot(4, 4, i + 1)
-    plt.imshow(table[i * DEPTH // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+    plt.imshow(table[i * args.size // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
     plt.colorbar()
 
     plt.title(f'Reflectivity = {i / 15:.2f}')
@@ -152,4 +155,4 @@ if __name__ == '__main__':
   print('Mean absolute error:', np.mean(errors))
   print('Maximum absolute error:', np.max(errors))
 
-  np.savetxt('glossy.csv', table.reshape(-1, WIDTH), fmt='%a', delimiter=',')
+  np.savetxt(args.output, table.reshape(-1, args.size), fmt='%a', delimiter=',')

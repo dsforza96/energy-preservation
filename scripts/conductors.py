@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from argparse import ArgumentParser
 from itertools import product
 from multiprocessing import cpu_count, Pool
 from numba import carray, cfunc, jit, types
@@ -61,16 +62,19 @@ def integrand(argc, argv):
 
 
 if __name__ == '__main__':
-  WIDTH = 32
-  HEIGHT = 32
+  parser = ArgumentParser()
+  parser.add_argument('--size', help='Look-up table size', type=int, default=32)
+  parser.add_argument('--output', help='Output filename', default='conductors.csv')
+
+  args = parser.parse_args()
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
 
-  xrange = np.linspace(0, 1, WIDTH)
+  xrange = np.linspace(0, 1, args.size)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
 
-  yrange = np.linspace(0, 1, HEIGHT)
+  yrange = np.linspace(0, 1, args.size)
   yrange = np.where(yrange < roughness_eps, roughness_eps, yrange)
   yrange = np.square(yrange)
 
@@ -80,11 +84,11 @@ if __name__ == '__main__':
     return dblquad(integrand, 0, 2 * np.pi, lambda x: 0, lambda x: 1, args=args)
 
   with Pool(cpu_count()) as pool:
-    results = list(tqdm(pool.imap(integrate, product(yrange, xrange)), total=WIDTH * HEIGHT))
+    results = list(tqdm(pool.imap(integrate, product(yrange, xrange)), total=args.size * args.size))
 
   albedo, errors = zip(*results)
 
-  table = np.asarray(albedo, dtype=np.float32).reshape(HEIGHT, WIDTH)
+  table = np.asarray(albedo, dtype=np.float32).reshape(args.size, args.size)
 
   plt.figure()
   plt.imshow(table, extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
@@ -99,4 +103,4 @@ if __name__ == '__main__':
   print('Mean absolute error:', np.mean(errors))
   print('Maximum absolute error:', np.max(errors))
 
-  np.savetxt('conductors.csv', table, fmt='%a', delimiter=',')
+  np.savetxt(args.output, table, fmt='%a', delimiter=',')
