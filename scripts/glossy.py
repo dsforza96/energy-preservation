@@ -106,13 +106,12 @@ def integrand(argc, argv):
 
 
 if __name__ == '__main__':
-  WIDTH = 32
-  HEIGHT = 32
-  DEPTH = 32
+  WIDTH = 16
+  HEIGHT = 16
+  DEPTH = 16
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
-  # ior_eps = 1e-4
 
   xrange = np.linspace(0, 1, WIDTH)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
@@ -122,7 +121,6 @@ if __name__ == '__main__':
   yrange = np.square(yrange)
 
   zrange = np.linspace(0, 1, DEPTH)
-  # zrange = np.where(zrange < ior_eps, ior_eps, zrange)
   zrange = reflectivity_to_eta(zrange)
 
   integrand = LowLevelCallable(integrand.ctypes)
