@@ -16,7 +16,7 @@ def ratpoly(xdata, *coef):
 if __name__ == '__main__':
   parser = ArgumentParser()
   parser.add_argument('--input', help='The look-up table to fit', default='resources/conductors.csv')
-  parser.add_argument('--deg', help='The degree of the polynomial', type=int, default=3)
+  parser.add_argument('--deg', help='The degree of the polynomial to use', type=int, default=3)
   parser.add_argument('--rational', help='Either to use rational functions of not', action='store_true')
 
   args = parser.parse_args()
@@ -39,29 +39,48 @@ if __name__ == '__main__':
     res = poly @ popt
   else:
     p0 = np.ones(poly.shape[-1] * 2 - 1)
-    popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, method='trf')
+    popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, maxfev=10000)
     res = ratpoly(poly.T, *popt)
 
-  plt.figure()
-  plt.suptitle('Directional Albedo')
+  if Z.ndim == 2:
+    plt.figure()
+    plt.suptitle('Directional Albedo')
 
-  plt.subplot(1, 2, 1)
-  plt.imshow(Z, extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
-  plt.colorbar()
+    plt.subplot(1, 2, 1)
+    plt.imshow(Z, extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+    plt.colorbar()
 
-  plt.title('Original')
-  plt.xlabel('cos(theta)')
-  plt.ylabel('roughness')
+    plt.title('Original')
+    plt.xlabel('cos(theta)')
+    plt.ylabel('roughness')
 
-  plt.subplot(1, 2, 2)
-  plt.imshow(res.reshape(size, size), extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
-  plt.colorbar()
+    plt.subplot(1, 2, 2)
+    plt.imshow(res.reshape(size, size), extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+    plt.colorbar()
 
-  plt.title('Fit')
-  plt.xlabel('cos(theta)')
-  plt.ylabel('roughness')
+    plt.title('Fit')
+    plt.xlabel('cos(theta)')
+    plt.ylabel('roughness')
 
-  plt.show()
+    plt.show()
+  else:
+    tables = [Z, res.reshape(size, size, size)]
+    titles = ['Original', 'Fit']
+
+    for table, title in zip(tables, titles):
+      plt.figure()
+      plt.suptitle(f'Directional Albedo ({title})')
+
+      for i in range(16):
+        plt.subplot(4, 4, i + 1)
+        plt.imshow(table[i * size // 16], extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+        plt.colorbar()
+
+        plt.title(f'Reflectivity = {i / 15:.2f}')
+        plt.xlabel('cos(theta)')
+        plt.ylabel('roughness')
+
+      plt.show()
 
   print('Optimal coefficients:')
-  print(popt)
+  print(popt.astype(np.float32))
