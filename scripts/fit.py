@@ -15,13 +15,13 @@ def ratpoly(xdata, *coef):
 
 if __name__ == '__main__':
   parser = ArgumentParser()
-  parser.add_argument('--input', help='The look-up table to fit', default='resources/conductors.csv')
+  parser.add_argument('table', help='The look-up table to fit')
   parser.add_argument('--deg', help='The degree of the polynomial to use', type=int, default=3)
   parser.add_argument('--rational', help='Either to use rational functions of not', action='store_true')
 
   args = parser.parse_args()
 
-  Z = np.genfromtxt(args.input, delimiter=',', dtype=np.float32)
+  Z = np.genfromtxt(args.table, delimiter=',', dtype=np.float32)
   
   size = Z.shape[-1]
   x = np.linspace(0, 1, size)
