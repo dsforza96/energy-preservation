@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
-  ior_eps = 1.02
+  ior_range = (1.05, 3)
 
   xrange = np.linspace(0, 1, args.size)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)
@@ -111,9 +111,9 @@ if __name__ == '__main__':
   yrange = np.where(yrange < roughness_eps, roughness_eps, yrange)
   yrange = np.square(yrange)
 
-  zrange = np.linspace(0, 1, args.size)
-  zrange = reflectivity_to_eta(zrange)
-  zrange = np.where(zrange < ior_eps, ior_eps, zrange)
+  zrange = np.linspace(*ior_range, args.size)
+  # zrange = reflectivity_to_eta(zrange)
+  # zrange = np.where(zrange < ior_eps, ior_eps, zrange)
 
   integrand = LowLevelCallable(integrand.ctypes)
 
