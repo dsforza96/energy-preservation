@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
   cos_theta_eps = 0.02
   roughness_eps = 0.035
-  ior_range = (1.05, 3)
+  ior_range = (1.25, 3)
 
   xrange = np.linspace(0, 1, args.size)
   xrange = np.where(xrange < cos_theta_eps, cos_theta_eps, xrange)

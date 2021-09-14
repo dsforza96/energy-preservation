@@ -39,7 +39,10 @@ if __name__ == '__main__':
     res = poly @ popt
   else:
     p0 = np.ones(poly.shape[-1] * 2 - 1)
-    popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, maxfev=10000)
+    # sigma = 0.1 * np.ones_like(Z)
+    # sigma[4:, ...] = 1
+    # popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, sigma=sigma.ravel(), method='trf')
+    popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, method='trf')
     res = ratpoly(poly.T, *popt)
 
   if Z.ndim == 2:
