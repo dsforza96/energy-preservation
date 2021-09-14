@@ -36,14 +36,14 @@ if __name__ == '__main__':
 
   if not args.rational:
     popt, *_ = np.linalg.lstsq(poly, Z.ravel(), rcond=None)
-    res = poly @ popt
+    results = poly @ popt
   else:
     p0 = np.ones(poly.shape[-1] * 2 - 1)
     # sigma = 0.1 * np.ones_like(Z)
     # sigma[4:, ...] = 1
     # popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, sigma=sigma.ravel(), method='trf')
     popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, method='trf')
-    res = ratpoly(poly.T, *popt)
+    results = ratpoly(poly.T, *popt)
 
   if Z.ndim == 2:
     plt.figure()
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     plt.ylabel('roughness')
 
     plt.subplot(1, 2, 2)
-    plt.imshow(res.reshape(size, size), extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
+    plt.imshow(results.reshape(size, size), extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
     plt.colorbar()
 
     plt.title('Fit')
@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
     plt.show()
   else:
-    tables = [Z, res.reshape(size, size, size)]
+    tables = [Z, results.reshape(size, size, size)]
     titles = ['Original', 'Fit']
 
     for table, title in zip(tables, titles):
@@ -87,3 +87,9 @@ if __name__ == '__main__':
 
   print('Optimal coefficients:')
   print(popt.astype(np.float32))
+
+  residuals = np.abs(Z.ravel() - results)
+
+  print('Mean absolute error:   ', np.mean(residuals))
+  print('Minimum absolute error:', np.min(residuals))
+  print('Maximum absolute error:', np.max(residuals))
