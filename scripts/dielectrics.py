@@ -17,8 +17,13 @@ def reflectivity_to_eta(reflectivity):
 
 
 @jit(nopython=True)
+def dot(v, w):
+  return v[0] * w[0] + v[1] * w[1] + v[2] * w[2]
+
+
+@jit(nopython=True)
 def fresnel_dielectric(eta, normal, outgoing):
-  cosw = np.abs(np.dot(normal, outgoing))
+  cosw = abs(dot(normal, outgoing))
   sin2 = 1 - cosw * cosw
   eta2 = eta * eta
   cos2t = 1 - sin2 / eta2
@@ -43,11 +48,11 @@ def microfacet_distribution(roughness, halfway):
 @jit(nopython=True)
 def microfacet_shadowing1(roughness, halfway, direction):
   cosine = direction[-1]
-  cosineh = np.dot(halfway, direction)
+  cosineh = dot(halfway, direction)
   if cosine * cosineh <= 0: return 0
   roughness2 = roughness * roughness
   cosine2 = cosine * cosine
-  return 2 * np.abs(cosine) / (np.abs(cosine) + np.sqrt(cosine2 - roughness2 * cosine2 + roughness2))
+  return 2 * abs(cosine) / (abs(cosine) + np.sqrt(cosine2 - roughness2 * cosine2 + roughness2))
 
 
 @jit(nopython=True)
@@ -56,34 +61,34 @@ def microfacet_shadowing(roughness, halfway, outgoing, incoming):
 
 
 @jit(nopython=True)
-def normalize(v):
-  l = np.linalg.norm(v)
-  return v / l if l != 0 else v
+def halfway_vector(v, w):
+  s = (v[0] + w[0], v[1] + w[1], v[2] + w[2])
+  l = np.sqrt(s[0] * s[0] + s[1] * s[1] + s[2] * s[2])
+  return (s[0] / l, s[1] / l, s[2] / l) if l != 0 else s
 
 
 @jit(nopython=True)
 def eval_refractive(ior, roughness, mu_out, mu_in, phi):
   if mu_in * mu_out == 0: return 0
-  outgoing = np.asarray([np.sqrt(1 - mu_out * mu_out),
-                         0,
-                         mu_out])
-  incoming = np.asarray([np.sqrt(1 - mu_in * mu_in) * np.cos(phi),
-                         np.sqrt(1 - mu_in * mu_in) * np.sin(phi),
-                         mu_in])
+  outgoing = (np.sqrt(1 - mu_out * mu_out), 0, mu_out)
+  incoming = (np.sqrt(1 - mu_in * mu_in) * np.cos(phi),
+              np.sqrt(1 - mu_in * mu_in) * np.sin(phi),
+              mu_in)
   if mu_in * mu_out > 0:
-    halfway = normalize(incoming + outgoing)
+    halfway = halfway_vector(incoming, outgoing)
     F = fresnel_dielectric(ior, halfway, outgoing)
     D = microfacet_distribution(roughness, halfway)
     G = microfacet_shadowing(roughness, halfway, outgoing, incoming)
-    return F * D * G / np.abs(4 * mu_out * mu_in) * np.abs(mu_in)
+    return F * D * G / abs(4 * mu_out * mu_in) * abs(mu_in)
   else:
-    halfway = -normalize(ior * incoming + outgoing) * (-1 if ior < 1 else 1)
+    halfway_ = halfway_vector((incoming[0] * ior, incoming[1] * ior, incoming[2] * ior), outgoing)
+    halfway = halfway_ if ior < 1 else (-halfway_[0], -halfway_[1], -halfway_[2])
     F = fresnel_dielectric(ior, halfway, outgoing)
     D = microfacet_distribution(roughness, halfway)
     G = microfacet_shadowing(roughness, halfway, outgoing, incoming)
     # [Walter 2007] equation 21
-    return np.abs((np.dot(outgoing, halfway) * np.dot(incoming, halfway)) / (mu_out * mu_in)) * \
-           (1 - F) * D * G / np.square(ior * np.dot(halfway, incoming) + np.dot(halfway, outgoing)) * np.abs(mu_in)
+    return np.square(ior) * abs((dot(outgoing, halfway) * dot(incoming, halfway)) / (mu_out * mu_in)) * \
+           (1 - F) * D * G / np.square(ior * dot(halfway, incoming) + dot(halfway, outgoing)) * abs(mu_in)
 
 
 @cfunc(types.double(types.intc, types.CPointer(types.double)))
