@@ -11,8 +11,7 @@ from tqdm import tqdm
 
 
 @jit(nopython=True)
-def microfacet_distribution(roughness, halfway):
-  cosine = halfway[-1]
+def microfacet_distribution(roughness, cosine):
   if cosine <= 0: return 0
   roughness2 = roughness * roughness
   cosine2 = cosine * cosine
@@ -20,9 +19,14 @@ def microfacet_distribution(roughness, halfway):
 
 
 @jit(nopython=True)
+def dot(v, w):
+  return v[0] * w[0] + v[1] * w[1] + v[2] * w[2]
+
+
+@jit(nopython=True)
 def microfacet_shadowing1(roughness, halfway, direction):
   cosine = direction[-1]
-  cosineh = np.dot(halfway, direction)
+  cosineh = dot(halfway, direction)
   if cosine * cosineh <= 0: return 0
   roughness2 = roughness * roughness
   cosine2 = cosine * cosine
@@ -35,22 +39,21 @@ def microfacet_shadowing(roughness, halfway, outgoing, incoming):
 
 
 @jit(nopython=True)
-def normalize(v):
-  l = np.linalg.norm(v)
-  return v / l if l != 0 else v
+def halfway_vector(v, w):
+  s = (v[0] + w[0], v[1] + w[1], v[2] + w[2])
+  l = np.sqrt(s[0] * s[0] + s[1] * s[1] + s[2] * s[2])
+  return (s[0] / l, s[1] / l, s[2] / l) if l != 0 else (s[0], s[1], s[2])
 
 
 @jit(nopython=True)
 def eval_metallic(roughness, mu_out, mu_in, phi):
   if mu_in * mu_out <= 0: return 0
-  outgoing = np.asarray([np.sqrt(1 - mu_out * mu_out),
-                         0,
-                         mu_out])
-  incoming = np.asarray([np.sqrt(1 - mu_in * mu_in) * np.cos(phi),
-                         np.sqrt(1 - mu_in * mu_in) * np.sin(phi),
-                         mu_in])
-  halfway = normalize(incoming + outgoing)
-  D = microfacet_distribution(roughness, halfway)
+  outgoing = (np.sqrt(1 - mu_out * mu_out), 0, mu_out)
+  incoming = (np.sqrt(1 - mu_in * mu_in) * np.cos(phi),
+              np.sqrt(1 - mu_in * mu_in) * np.sin(phi),
+              mu_in)
+  halfway = halfway_vector(incoming, outgoing)
+  D = microfacet_distribution(roughness, halfway[-1])
   G = microfacet_shadowing(roughness, halfway, outgoing, incoming)
   return D * G / (4 * mu_out * mu_in) * np.abs(mu_in)
 
@@ -98,9 +101,9 @@ if __name__ == '__main__':
   plt.xlabel('cos(theta)')
   plt.ylabel('roughness')
 
-  plt.show()
+  #plt.show()
 
-  print('Mean absolute error:', np.mean(errors))
-  print('Maximum absolute error:', np.max(errors))
+  print('Mean np.absolute error:', np.mean(errors))
+  print('Maximum np.absolute error:', np.max(errors))
 
   np.savetxt(args.output, table, fmt='%a', delimiter=',')
