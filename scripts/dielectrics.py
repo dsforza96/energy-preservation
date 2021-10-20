@@ -203,10 +203,10 @@ if __name__ == '__main__':
 
   filename, ext = splitext(args.output)
 
-  np.savetxt(f'{filename}_entering_r{ext}', enter_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(f'{filename}_entering_t{ext}', enter_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(f'{filename}_entering{ext}', enter_table.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_r{ext}', enter_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_t{ext}', enter_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(args.output, enter_table.reshape(-1, args.size), fmt='%a', delimiter=',')
 
-  np.savetxt(f'{filename}_leaving_r{ext}', leave_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(f'{filename}_leaving_t{ext}', leave_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(f'{filename}_leaving{ext}', leave_table.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_inv_eta_r{ext}', leave_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_inv_eta_t{ext}', leave_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_inv_eta{ext}', leave_table.reshape(-1, args.size), fmt='%a', delimiter=',')
