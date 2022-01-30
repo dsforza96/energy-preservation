@@ -32,7 +32,7 @@ if __name__ == '__main__':
   else:
     Z = Z.reshape(size, size, size)
     w = np.linspace(0.0125, 0.25, size) if args.reduce_range else x
-    X = np.asarray(list(product(x, y, x)))
+    X = np.asarray(list(product(w, y, x)))
 
   poly = PolynomialFeatures(args.deg).fit_transform(X)
 
