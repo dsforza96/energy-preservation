@@ -88,7 +88,7 @@ def eval_refractive(ior, roughness, mu_out, mu_in, phi):
     G = microfacet_shadowing(roughness, halfway, outgoing, incoming)
     # [Walter 2007] equation 21
     return abs((dot(outgoing, halfway) * dot(incoming, halfway)) / (mu_out * mu_in)) * \
-           (1 - F) * D * G / np.square(dot(halfway, incoming) + dot(halfway, outgoing) / ior) * abs(mu_in)
+           (1 - F) * D * G / np.square(ior * dot(halfway, incoming) + dot(halfway, outgoing)) * abs(mu_in)
 
 
 @cfunc(types.double(types.intc, types.CPointer(types.double)))
