@@ -18,20 +18,18 @@ if __name__ == '__main__':
   parser.add_argument('table', help='The look-up table to fit')
   parser.add_argument('--deg', help='The degree of the polynomial to use', type=int, default=3)
   parser.add_argument('--rational', help='Either to use rational functions of not', action='store_true')
-  parser.add_argument('--reduce-range', help='Fit the look-up table in the ior range [1.25, 3]', action='store_true')
 
   args = parser.parse_args()
 
   Z = np.genfromtxt(args.table, delimiter=',', dtype=np.float32)
   
   size = Z.shape[-1]
-  x = y = np.linspace(0, 1, size)
+  x = y = w = np.linspace(0, 1, size)
 
   if Z.shape[0] == size:
     X = np.asarray(list(product(y, x)))
   else:
     Z = Z.reshape(size, size, size)
-    w = np.linspace(0.0125, 0.25, size) if args.reduce_range else x
     X = np.asarray(list(product(w, y, x)))
 
   poly = PolynomialFeatures(args.deg).fit_transform(X)
