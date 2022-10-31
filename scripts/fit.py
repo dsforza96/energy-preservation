@@ -45,6 +45,15 @@ if __name__ == '__main__':
     popt, _ = curve_fit(ratpoly, poly.T, Z.ravel(), p0, method='trf', maxfev=10000)
     results = ratpoly(poly.T, *popt)
 
+  print('Optimal coefficients:')
+  print(popt.astype(np.float32))
+
+  residuals = np.abs(Z.ravel() - results)
+
+  print('Mean absolute error:   ', np.mean(residuals))
+  print('Minimum absolute error:', np.min(residuals))
+  print('Maximum absolute error:', np.max(residuals))
+
   if Z.ndim == 2:
     plt.figure()
     plt.suptitle('Directional Albedo')
@@ -84,12 +93,3 @@ if __name__ == '__main__':
         plt.ylabel('roughness')
 
       plt.show()
-
-  print('Optimal coefficients:')
-  print(popt.astype(np.float32))
-
-  residuals = np.abs(Z.ravel() - results)
-
-  print('Mean absolute error:   ', np.mean(residuals))
-  print('Minimum absolute error:', np.min(residuals))
-  print('Maximum absolute error:', np.max(residuals))

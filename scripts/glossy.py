@@ -10,7 +10,7 @@ from scipy.integrate import dblquad
 from tqdm import tqdm
 
 
-specular_albedo = np.genfromtxt('resources/conductors.csv', delimiter=',', dtype=np.float32)
+SPECULAR_ALBEDO = np.genfromtxt('resources/tables/hi-res/conductors.csv', delimiter=',', dtype=np.float32)
 
 
 def reflectivity_to_eta(reflectivity):
@@ -64,7 +64,7 @@ def microfacet_shadowing(roughness, halfway, outgoing, incoming):
 
 @jit(nopython=True)
 def microfacet_compensation(roughness, mu_out):
-  leny, lenx = specular_albedo.shape
+  leny, lenx = SPECULAR_ALBEDO.shape
 
   s = np.sqrt(roughness) * (leny - 1)
   t = mu_out * (lenx - 1)
@@ -74,10 +74,10 @@ def microfacet_compensation(roughness, mu_out):
   jj = min(j + 1, lenx - 1)
   u, v = s - i, t - j
 
-  E = specular_albedo[i, j] * (1 - u) * (1 - v) + \
-      specular_albedo[i, jj] * (1 - u) * v + \
-      specular_albedo[ii, j] * u * (1 - v) + \
-      specular_albedo[ii, jj] * u * v
+  E = SPECULAR_ALBEDO[i, j] * (1 - u) * (1 - v) + \
+      SPECULAR_ALBEDO[i, jj] * (1 - u) * v + \
+      SPECULAR_ALBEDO[ii, j] * u * (1 - v) + \
+      SPECULAR_ALBEDO[ii, jj] * u * v
 
   return 1 / E
 
@@ -139,8 +139,12 @@ if __name__ == '__main__':
     results = list(tqdm(pool.imap(integrate, product(zrange, yrange, xrange)), total=args.size * args.size * args.size))
 
   albedo, errors = zip(*results)
-
   table = np.asarray(albedo, dtype=np.float32).reshape(args.size, args.size, args.size)
+
+  print('Mean absolute error:', np.mean(errors))
+  print('Maximum absolute error:', np.max(errors))
+
+  np.savetxt(args.output, table.reshape(-1, args.size), fmt='%a', delimiter=',')
 
   plt.figure()
   plt.suptitle('Directional Albedo')
@@ -155,8 +159,3 @@ if __name__ == '__main__':
     plt.ylabel('roughness')
 
   plt.show()
-
-  print('Mean absolute error:', np.mean(errors))
-  print('Maximum absolute error:', np.max(errors))
-
-  np.savetxt(args.output, table.reshape(-1, args.size), fmt='%a', delimiter=',')

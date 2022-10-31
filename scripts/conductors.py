@@ -91,8 +91,12 @@ if __name__ == '__main__':
     results = list(tqdm(pool.imap(integrate, product(yrange, xrange)), total=args.size * args.size))
 
   albedo, errors = zip(*results)
-
   table = np.asarray(albedo, dtype=np.float32).reshape(args.size, args.size)
+
+  print('Mean absolute error:', np.mean(errors))
+  print('Maximum absolute error:', np.max(errors))
+
+  np.savetxt(args.output, table, fmt='%a', delimiter=',')
 
   plt.figure()
   plt.imshow(table, extent=[0, 1, 1, 0], cmap=plt.get_cmap('gray'), interpolation=None)
@@ -103,8 +107,3 @@ if __name__ == '__main__':
   plt.ylabel('roughness')
 
   plt.show()
-
-  print('Mean absolute error:', np.mean(errors))
-  print('Maximum absolute error:', np.max(errors))
-
-  np.savetxt(args.output, table, fmt='%a', delimiter=',')

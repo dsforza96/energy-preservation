@@ -165,7 +165,7 @@ if __name__ == '__main__':
 
   leave_albedo_t, leave_errors_t = zip(*results)
 
-  # Show and save results
+  # Save and show results
   enter_table_r = np.asarray(enter_albedo_r, dtype=np.float32).reshape(args.size, args.size, args.size)
   enter_table_t = np.asarray(enter_albedo_t, dtype=np.float32).reshape(args.size, args.size, args.size)
   enter_table = enter_table_r + enter_table_t
@@ -173,6 +173,24 @@ if __name__ == '__main__':
   leave_table_r = np.asarray(leave_albedo_r, dtype=np.float32).reshape(args.size, args.size, args.size)
   leave_table_t = np.asarray(leave_albedo_t, dtype=np.float32).reshape(args.size, args.size, args.size)
   leave_table = leave_table_r + leave_table_t
+
+  errors = [enter_errors_r, enter_errors_t, leave_errors_r, leave_errors_t]
+  names = ['entering medium, reflection', 'entering medium, transmission',
+            'leaving medium, reflection', 'leaving medium, transmission']
+
+  for errors, name in zip(errors, names):
+    print(f'Mean absolute error ({name}):', np.mean(errors))
+    print(f'Maximum absolute error ({name}):', np.max(errors))
+
+  filename, ext = splitext(args.output)
+
+  np.savetxt(f'{filename}_r{ext}', enter_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_t{ext}', enter_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(args.output, enter_table.reshape(-1, args.size), fmt='%a', delimiter=',')
+
+  np.savetxt(f'{filename}_inv_eta_r{ext}', leave_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_inv_eta_t{ext}', leave_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
+  np.savetxt(f'{filename}_inv_eta{ext}', leave_table.reshape(-1, args.size), fmt='%a', delimiter=',')
 
   tables = [enter_table_r, enter_table_t, enter_table, leave_table_r, leave_table_t, leave_table]
   titles = ['Entering Medium, Reflection', 'Entering Medium, Transmission', 'Entering Medium',
@@ -192,21 +210,3 @@ if __name__ == '__main__':
       plt.ylabel('roughness')
 
     plt.show()
-
-  errors = [enter_errors_r, enter_errors_t, leave_errors_r, leave_errors_t]
-  names = ['entering medium, reflection', 'entering medium, transmission',
-            'leaving medium, reflection', 'leaving medium, transmission']
-
-  for errors, name in zip(errors, names):
-    print(f'Mean absolute error ({name}):', np.mean(errors))
-    print(f'Maximum absolute error ({name}):', np.max(errors))
-
-  filename, ext = splitext(args.output)
-
-  np.savetxt(f'{filename}_r{ext}', enter_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(f'{filename}_t{ext}', enter_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(args.output, enter_table.reshape(-1, args.size), fmt='%a', delimiter=',')
-
-  np.savetxt(f'{filename}_inv_eta_r{ext}', leave_table_r.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(f'{filename}_inv_eta_t{ext}', leave_table_t.reshape(-1, args.size), fmt='%a', delimiter=',')
-  np.savetxt(f'{filename}_inv_eta{ext}', leave_table.reshape(-1, args.size), fmt='%a', delimiter=',')
