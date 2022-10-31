@@ -6,10 +6,16 @@ Applications in Graphics*. 2022.
 
 ![Enforcing Energy Preservation in Microfacet Models](teaser.png)
 
+Microfacet models tend to lose energy with the increase in surface roughness,
+causing an undesired darkening of rough materials. Our method allows compensating
+for the loss of energy without the use of precomputed look-up tables. Instead, we
+propose a set of analytic approximations of the directional albedo of conductive
+(*left*), glossy (*center*) and dielectric (*right*) materials.
+
 Use the [`conductors.py`](scripts/conductors.py), [`glossy.py`](scripts/glossy.py)
 and [`dielectrics.py`](scripts/dielectrics.py) scripts to generate the look-up
-tables containing the values of the directional albedo of conductive, glossy and
-dielectric materials, respectively. You can then use [`fit.py`](scripts/fit.py)
+tables containing the values of the directional albedo of conductors, glossy materials
+and dielectrics, respectively. You can then use [`fit.py`](scripts/fit.py)
 to approximate them with a polynomial or a rational function of the desired degree.
 
 ## Citation
