@@ -1,57 +1,22 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 from argparse import ArgumentParser
 from itertools import product
 from multiprocessing import cpu_count, Pool
-from numba import carray, cfunc, jit, types
+from numba import carray, cfunc, types
 from scipy import LowLevelCallable
 from scipy.integrate import dblquad
 from tqdm import tqdm
 
-
-@jit(nopython=True)
-def microfacet_distribution(roughness, halfway):
-  cosine = halfway[-1]
-  if cosine <= 0: return 0
-  roughness2 = roughness * roughness
-  cosine2 = cosine * cosine
-  return roughness2 / (np.pi * (cosine2 * roughness2 + 1 - cosine2) * (cosine2 * roughness2 + 1 - cosine2))
-
-
-@jit(nopython=True)
-def dot(v, w):
-  return v[0] * w[0] + v[1] * w[1] + v[2] * w[2]
-
-
-@jit(nopython=True)
-def microfacet_shadowing1(roughness, halfway, direction):
-  cosine = direction[-1]
-  cosineh = dot(halfway, direction)
-  if cosine * cosineh <= 0: return 0
-  roughness2 = roughness * roughness
-  cosine2 = cosine * cosine
-  return 2 * abs(cosine) / (abs(cosine) + np.sqrt(cosine2 - roughness2 * cosine2 + roughness2))
-
-
-@jit(nopython=True)
-def microfacet_shadowing(roughness, halfway, outgoing, incoming):
-  return microfacet_shadowing1(roughness, halfway, outgoing) * microfacet_shadowing1(roughness, halfway, incoming)
-
-
-@jit(nopython=True)
-def halfway_vector(v, w):
-  s = (v[0] + w[0], v[1] + w[1], v[2] + w[2])
-  l = np.sqrt(s[0] * s[0] + s[1] * s[1] + s[2] * s[2])
-  return (s[0] / l, s[1] / l, s[2] / l) if l != 0 else s
+from ggx import *
 
 
 @jit(nopython=True)
 def eval_metallic(roughness, mu_out, mu_in, phi):
   if mu_in * mu_out <= 0: return 0
-  outgoing = (np.sqrt(1 - mu_out * mu_out), 0, mu_out)
-  incoming = (np.sqrt(1 - mu_in * mu_in) * np.cos(phi),
-              np.sqrt(1 - mu_in * mu_in) * np.sin(phi),
+  outgoing = (math.sqrt(1 - mu_out * mu_out), 0, mu_out)
+  incoming = (math.sqrt(1 - mu_in * mu_in) * math.cos(phi),
+              math.sqrt(1 - mu_in * mu_in) * math.sin(phi),
               mu_in)
   halfway = halfway_vector(incoming, outgoing)
   D = microfacet_distribution(roughness, halfway)
@@ -85,7 +50,7 @@ if __name__ == '__main__':
   integrand = LowLevelCallable(integrand.ctypes)
 
   def integrate(args):
-    return dblquad(integrand, 0, 2 * np.pi, lambda x: 0, lambda x: 1, args=args)
+    return dblquad(integrand, 0, 2 * math.pi, lambda x: 0, lambda x: 1, args=args)
 
   with Pool(cpu_count()) as pool:
     results = list(tqdm(pool.imap(integrate, product(yrange, xrange)), total=args.size * args.size))
