@@ -2,7 +2,7 @@
 
 Software implementation for the paper SFORZA, Davide; PELLACINI, Fabio.
 Enforcing Energy Preservation in Microfacet Models. In: *Smart Tools and
-Applications in Graphics*. 2022.
+Applications in Graphics - Eurographics Italian Chapter Conference*. 2022.
 
 ![Enforcing Energy Preservation in Microfacet Models](teaser.png)
 
@@ -22,7 +22,17 @@ to approximate them with a polynomial or a rational function of the desired degr
 If you want to include this code in your work, please cite us as:
 
 ```latex
-BibTeX
+@inproceedings {10.2312:stag.20221258,
+  booktitle = {Smart Tools and Applications in Graphics - Eurographics Italian Chapter Conference},
+  editor = {Cabiddu, Daniela and Schneider, Teseo and Allegra, Dario and Catalano, Chiara Eva and Cherchi, Gianmarco and Scateni, Riccardo},
+  title = {{Enforcing Energy Preservation in Microfacet Models}},
+  author = {Sforza, Davide and Pellacini, Fabio},
+  year = {2022},
+  publisher = {The Eurographics Association},
+  ISSN = {2617-4855},
+  ISBN = {978-3-03868-191-5},
+  DOI = {10.2312/stag.20221258}
+}
 ```
 
 ## License
